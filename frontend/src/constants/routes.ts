@@ -1,0 +1,35 @@
+export const ROUTES = {
+  HOME: '/',
+  AUTH: {
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+  },
+  ACCOUNT: {
+    ROOT: '/account',
+    ORDERS: '/account/orders',
+    PROFILE: '/account/profile',
+    ADDRESSES: '/account/addresses',
+    WISHLIST: '/account/wishlist',
+    SETTINGS: '/account/settings',
+  },
+  ADMIN: {
+    ROOT: '/admin',
+    PRODUCTS: '/admin/products',
+    ORDERS: '/admin/orders',
+    USERS: '/admin/users',
+    SELLERS: '/admin/sellers',
+    CATEGORIES: '/admin/categories',
+    ANALYTICS: '/admin/analytics',
+    BLOG: '/admin/blog',
+    TRAININGS: '/admin/trainings',
+    SETTINGS: '/admin/settings',
+  },
+  SELLER: {
+    ROOT: '/seller',
+    PRODUCTS: '/seller/products',
+    ORDERS: '/seller/orders',
+    INVENTORY: '/seller/inventory',
+    ANALYTICS: '/seller/analytics',
+    SETTINGS: '/seller/settings',
+  },
+} as const;

@@ -31,6 +31,6 @@ router.put('/:id', authenticate, requireSeller, updateProduct);
 router.delete('/:id', authenticate, requireSeller, deleteProduct);
 
 router.post('/:productId/reviews', authenticate, addReview);
-router.post('/reviews/:id/helpful', markHelpful);
+router.post('/reviews/:id/helpful', authenticate, markHelpful);
 
 export default router;

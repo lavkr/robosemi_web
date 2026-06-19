@@ -42,6 +42,7 @@ interface Review {
   };
   rating: number;
   comment: string;
+  verifiedPurchase: boolean;
   createdAt: string;
   helpful: number;
 }
@@ -60,7 +61,7 @@ export default function ProductDetailPage() {
   const [canReview, setCanReview] = useState(false);
   const [checkingPurchase, setCheckingPurchase] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, session } = useAuth();
 
   const fetchProduct = async (id: string) => {
     try {
@@ -93,10 +94,14 @@ export default function ProductDetailPage() {
 
   const checkPurchaseStatus = useCallback(async () => {
     if (!user?.email) return;
-    
+
     setCheckingPurchase(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/orders/check-purchase?email=${user.email}&productId=${params.id}`);
+      const token = (session as any)?.accessToken;
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/orders/check-purchase?productId=${params.id}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+      );
       const data = await response.json();
       setCanReview(data.data?.hasPurchased ?? false);
     } catch (error) {
@@ -104,7 +109,7 @@ export default function ProductDetailPage() {
     } finally {
       setCheckingPurchase(false);
     }
-  }, [user?.email, params.id]);
+  }, [user?.email, params.id, session]);
 
   useEffect(() => {
     if (params.id) {
@@ -126,11 +131,17 @@ export default function ProductDetailPage() {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reviews/${reviewId}/helpful`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail: user.email })
-      });
+      const token = (session as any)?.accessToken;
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/products/reviews/${reviewId}/helpful`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        },
+      );
       
       const data = await response.json();
       
@@ -157,15 +168,18 @@ export default function ProductDetailPage() {
 
     setSubmittingReview(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/products/${params.id}/reviews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newReview,
-          name: user?.name,
-          email: user?.email
-        })
-      });
+      const token = (session as any)?.accessToken;
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/products/${params.id}/reviews`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ productId: params.id, ...newReview }),
+        },
+      );
 
       const data = await response.json();
       
@@ -669,70 +683,55 @@ export default function ProductDetailPage() {
                   {!isAuthenticated ? (
                     <div className="text-center py-8">
                       <p className="text-muted-foreground mb-4">Please log in to write a review</p>
-                      <Button onClick={() => window.location.href = '/login'}>Log In</Button>
+                      <Button onClick={() => window.location.href = '/auth/login'}>Log In to Review</Button>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="bg-muted/50 p-4 rounded-lg">
+                      <div className="bg-muted/50 p-3 rounded-lg flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">Reviewing as: <span className="font-medium text-foreground">{user?.name}</span></p>
-                        {checkingPurchase && (
-                          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            Checking purchase history...
-                          </p>
-                        )}
-                        {!checkingPurchase && (
-                          <p className={`text-sm mt-1 flex items-center gap-1 ${
-                            canReview ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {canReview ? (
-                              <>✓ You can review this product</>
-                            ) : (
-                              <>✗ You must purchase and receive this product to review it</>
-                            )}
-                          </p>
-                        )}
                       </div>
-                    
-                    <div>
-                      <Label>Rating</Label>
-                      <div className="flex items-center gap-1 mt-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => setNewReview(prev => ({ ...prev, rating: i + 1 }))}
-                            className="transition-colors hover:scale-110"
-                          >
-                            <Star
-                              className={`h-6 w-6 ${
-                                i < newReview.rating
-                                  ? 'fill-yellow-400 text-yellow-400'
-                                  : 'text-muted-foreground hover:text-yellow-400'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          {newReview.rating} star{newReview.rating !== 1 ? 's' : ''}
-                        </span>
+
+                      <div>
+                        <Label>Rating</Label>
+                        <div className="flex items-center gap-1 mt-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setNewReview(prev => ({ ...prev, rating: i + 1 }))}
+                              className="transition-colors hover:scale-110"
+                            >
+                              <Star
+                                className={`h-6 w-6 ${
+                                  i < newReview.rating
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-muted-foreground hover:text-yellow-400'
+                                }`}
+                              />
+                            </button>
+                          ))}
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            {newReview.rating} star{newReview.rating !== 1 ? 's' : ''}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="comment">Review</Label>
-                      <Textarea
-                        id="comment"
-                        value={newReview.comment}
-                        onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
-                        placeholder="Share your experience with this product..."
-                        rows={4}
-                      />
-                    </div>
-                    
-                      <Button 
-                        onClick={submitReview} 
-                        disabled={submittingReview || !canReview}
+
+                      <div>
+                        <Label htmlFor="comment">Your Review</Label>
+                        <Textarea
+                          id="comment"
+                          value={newReview.comment}
+                          onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
+                          placeholder="Share your experience with this product..."
+                          rows={4}
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={submitReview}
+                        disabled={submittingReview || !newReview.comment.trim()}
                         className="w-full md:w-auto"
                       >
                         {submittingReview ? (
@@ -774,9 +773,14 @@ export default function ProductDetailPage() {
                               <User className="h-5 w-5 text-primary" />
                             </div>
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
                                 <h4 className="font-semibold">{review.user.name}</h4>
-                                <div className="flex items-center gap-1">
+                                {review.verifiedPurchase && (
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                                    ✓ Verified Purchase
+                                  </span>
+                                )}
+                                <div className="flex items-center gap-0.5">
                                   {Array.from({ length: 5 }).map((_, i) => (
                                     <Star
                                       key={i}
@@ -789,7 +793,7 @@ export default function ProductDetailPage() {
                                   ))}
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                  {new Date(review.createdAt).toLocaleDateString()}
+                                  {new Date(review.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </span>
                               </div>
                               <p className="text-muted-foreground mb-3">{review.comment}</p>

@@ -31,15 +31,8 @@ export async function createReview(req: Request, res: Response): Promise<void> {
   try {
     const { productId, rating, comment } = req.body;
 
-    // Check if user purchased this product
-    const purchaseOrder = await orderRepository.findOne({
-      user: req.user!.userId,
-      'items.product': productId,
-      orderStatus: 'delivered',
-    });
-
-    if (!purchaseOrder) {
-      errorResponse(res, 'You can only review products you have purchased and received', 403, 'PURCHASE_REQUIRED');
+    if (!productId || !rating || !comment) {
+      errorResponse(res, 'productId, rating and comment are required', 400);
       return;
     }
 
@@ -54,11 +47,19 @@ export async function createReview(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Check if verified purchaser (no restriction — just a badge)
+    const purchaseOrder = await orderRepository.findOne({
+      user: req.user!.userId,
+      'items.product': productId,
+      orderStatus: 'delivered',
+    });
+
     const review = await reviewRepository.create({
       product: productId,
       user: { name: req.user!.name, email: req.user!.email },
       rating,
       comment,
+      verifiedPurchase: !!purchaseOrder,
     });
 
     // Update product rating

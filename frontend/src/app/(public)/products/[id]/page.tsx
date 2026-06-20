@@ -17,6 +17,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { RecentlyViewedSection } from '@/components/product/recently-viewed';
 
 interface Product {
   _id: string;
@@ -62,13 +64,25 @@ export default function ProductDetailPage() {
   const [checkingPurchase, setCheckingPurchase] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const { user, isAuthenticated, session } = useAuth();
+  const { addProduct } = useRecentlyViewed();
 
   const fetchProduct = async (id: string) => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/products/${id}`);
       if (response.ok) {
         const data = await response.json();
-        setProduct(data.data ?? data);
+        const p = data.data ?? data;
+        setProduct(p);
+        addProduct({
+          _id: p._id,
+          name: p.name,
+          price: p.price,
+          discount: p.discount,
+          images: p.images,
+          rating: p.rating,
+          reviewCount: p.reviewCount,
+          category: p.category,
+        });
       }
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -819,7 +833,11 @@ export default function ProductDetailPage() {
         </Tabs>
         </div>
       </div>
-      
+
+      {/* Recently Viewed */}
+      <div className="container mx-auto px-4 pb-10">
+        <RecentlyViewedSection excludeId={product._id} />
+      </div>
 
     </div>
   );

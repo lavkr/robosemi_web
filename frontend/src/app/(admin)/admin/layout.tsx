@@ -7,11 +7,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  Settings, 
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Users,
+  Settings,
   BarChart3,
   Home,
   Tag,
@@ -24,7 +24,8 @@ import {
   Store,
   MessageSquare,
   LogOut,
-  Image
+  Image,
+  Receipt
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
@@ -110,6 +111,13 @@ export default function AdminLayout({
                 <Link href="/admin/orders">
                   <ShoppingCart className="mr-3 h-4 w-4" />
                   Orders
+                </Link>
+              </Button>
+
+              <Button asChild variant="ghost" className="w-full justify-start">
+                <Link href="/admin/billing">
+                  <Receipt className="mr-3 h-4 w-4" />
+                  Billing
                 </Link>
               </Button>
               

@@ -10,6 +10,7 @@ import {
   trackAnalytics,
   calculateShipping,
   registerAsSeller,
+  sendInvoiceEmail,
 } from '../../controllers/misc.controller';
 import { authenticate } from '../../middlewares/auth.middleware';
 
@@ -25,5 +26,6 @@ router.get('/slides', getHeroSlides);
 router.post('/analytics', trackAnalytics);
 router.get('/shipping-rates', calculateShipping);
 router.post('/seller/register', authenticate, registerAsSeller);
+router.post('/send-invoice-email', authenticate, sendInvoiceEmail);
 
 export default router;

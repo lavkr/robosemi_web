@@ -6,6 +6,7 @@ import { slideRepository } from '../repositories/slide.repository';
 import { analyticsService } from '../services/analytics.service';
 import { calculateShippingRates, calculateCartWeight } from '../services/shipping.service';
 import { successResponse, errorResponse } from '../helpers/response';
+import { emailService } from '../services/email.service';
 
 export async function subscribeNewsletter(req: Request, res: Response): Promise<void> {
   try {
@@ -192,5 +193,46 @@ export async function registerAsSeller(req: Request, res: Response): Promise<voi
     successResponse(res, seller, 'Seller application submitted', 201);
   } catch (err: any) {
     errorResponse(res, err.message, err.statusCode ?? 400);
+  }
+}
+
+export async function sendInvoiceEmail(req: Request, res: Response): Promise<void> {
+  try {
+    const { to, subject, body, invoiceHtml } = req.body;
+
+    if (!to || !subject) {
+      errorResponse(res, '"to" and "subject" are required', 400);
+      return;
+    }
+
+    const htmlContent = invoiceHtml
+      ? `
+        <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:20px">
+          <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:24px 32px;border-radius:10px 10px 0 0;text-align:center">
+            <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:1px">RoboSemi</h1>
+            <p style="color:#93c5fd;margin:6px 0 0;font-size:13px">Invoice Enclosed</p>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:28px 32px;background:#fff">
+            <p style="color:#334155;font-size:14px;white-space:pre-line;margin:0 0 24px">${body ?? ''}</p>
+            <div style="border-top:1px solid #e2e8f0;padding-top:24px;margin-top:8px">
+              ${invoiceHtml}
+            </div>
+          </div>
+          <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px">
+            © ${new Date().getFullYear()} RoboSemi · reach@robosemi.in
+          </p>
+        </div>`
+      : `<div style="font-family:Arial,sans-serif;white-space:pre-line;padding:20px">${body ?? ''}</div>`;
+
+    await emailService.sendEmail({
+      to,
+      subject,
+      html: htmlContent,
+      text: body ?? '',
+    });
+
+    successResponse(res, null, 'Invoice email sent successfully');
+  } catch (err: any) {
+    errorResponse(res, err.message || 'Failed to send email', 500);
   }
 }
